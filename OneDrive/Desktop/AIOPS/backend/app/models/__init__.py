@@ -1,7 +1,8 @@
-﻿from app.models.alert import Alert
+from app.models.alert import Alert
 from app.models.analysis import Analysis
 from app.models.audit import AuditLog
 from app.models.incident import Incident
+from app.models.incident_event import IncidentEvent
 from app.models.metrics import MetricsSnapshot
 from app.models.remediation import RemediationAction
 from app.models.system import System
@@ -12,6 +13,7 @@ __all__ = [
     "Analysis",
     "AuditLog",
     "Incident",
+    "IncidentEvent",
     "MetricsSnapshot",
     "Permission",
     "RefreshToken",

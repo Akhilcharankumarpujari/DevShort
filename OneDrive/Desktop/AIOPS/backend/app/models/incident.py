@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from app.models.analysis import Analysis
     from app.models.remediation import RemediationAction
     from app.models.metrics import MetricsSnapshot
+    from app.models.incident_event import IncidentEvent
 
 
 class IncidentSeverity(StrEnum):
@@ -112,5 +113,10 @@ class Incident(Base, UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin):
     metrics_snapshots: Mapped[list[MetricsSnapshot]] = relationship(
         "MetricsSnapshot",
         back_populates="incident",
+    )
+    events: Mapped[list[IncidentEvent]] = relationship(
+        "IncidentEvent",
+        back_populates="incident",
+        cascade="all, delete-orphan",
     )
 
