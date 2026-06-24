@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from enum import StrEnum
@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     password_min_length: int = 8
 
     cors_origins: list[str] = Field(default_factory=list)
+
+    prometheus_url: str = "http://localhost:9090"
 
     database_url: str = "postgresql+asyncpg://aiops:aiops@localhost:5432/aiops"
     db_pool_size: int = 5
