@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import uuid
 from datetime import datetime
@@ -10,6 +10,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.db.mixins import SoftDeleteMixin, TimestampMixin, UUIDPrimaryKeyMixin
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.incident import Incident
+    from app.models.system import System
 
 
 class MetricsSource(StrEnum):

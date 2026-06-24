@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import uuid
 from datetime import datetime
@@ -8,6 +8,15 @@ from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, I
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.analysis import Analysis
+    from app.models.audit import AuditLog
+    from app.models.incident import Incident
+    from app.models.remediation import RemediationAction
+    from app.models.system import System
 
 
 class UserStatus(StrEnum):

@@ -1,6 +1,7 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -49,10 +50,10 @@ class AuthService:
         )
         self.session.add(user)
         await self.session.commit()
-        user = await self.get_user_by_id(user.id)
-        if user is None:
+        registered_user = await self.get_user_by_id(user.id)
+        if registered_user is None:
             raise AppException(status_code=500, code="registration_failed", message="Registration failed.")
-        return await self.build_auth_response(user)
+        return await self.build_auth_response(registered_user)
 
     async def login(self, *, email: str, password: str) -> AuthResponse:
         user = await self.get_user_by_email(email)
@@ -129,11 +130,11 @@ class AuthService:
             permissions_by_key[permission.key] = permission
 
         for permission_key in sorted(ALL_PERMISSIONS):
-            permission = permissions_by_key.get(permission_key)
-            if permission is None:
-                permission = Permission(key=permission_key, description=f"Allows {permission_key}.")
-                self.session.add(permission)
-                permissions_by_key[permission_key] = permission
+            existing_permission = permissions_by_key.get(permission_key)
+            if existing_permission is None:
+                new_permission = Permission(key=permission_key, description=f"Allows {permission_key}.")
+                self.session.add(new_permission)
+                permissions_by_key[permission_key] = new_permission
 
         await self.session.flush()
 
@@ -154,22 +155,31 @@ class AuthService:
         await self.session.commit()
 
     async def get_user_by_email(self, email: str) -> User | None:
-        return await self.session.scalar(
-            select(User)
-            .options(selectinload(User.roles).selectinload(Role.permissions))
-            .where(User.email == email.lower(), User.deleted_at.is_(None))
+        return cast(
+            User | None,
+            await self.session.scalar(
+                select(User)
+                .options(selectinload(User.roles).selectinload(Role.permissions))
+                .where(User.email == email.lower(), User.deleted_at.is_(None))
+            ),
         )
 
     async def get_user_by_id(self, user_id: UUID) -> User | None:
-        return await self.session.scalar(
-            select(User)
-            .options(selectinload(User.roles).selectinload(Role.permissions))
-            .where(User.id == user_id, User.deleted_at.is_(None))
+        return cast(
+            User | None,
+            await self.session.scalar(
+                select(User)
+                .options(selectinload(User.roles).selectinload(Role.permissions))
+                .where(User.id == user_id, User.deleted_at.is_(None))
+            ),
         )
 
     async def get_role_by_name(self, name: str) -> Role | None:
-        return await self.session.scalar(
-            select(Role).options(selectinload(Role.permissions)).where(Role.name == name)
+        return cast(
+            Role | None,
+            await self.session.scalar(
+                select(Role).options(selectinload(Role.permissions)).where(Role.name == name)
+            ),
         )
 
     async def build_auth_response(self, user: User) -> AuthResponse:
