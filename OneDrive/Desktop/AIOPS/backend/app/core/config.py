@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(default_factory=list)
 
     prometheus_url: str = "http://localhost:9090"
+    loki_url: str = "http://localhost:3100"
 
     database_url: str = "postgresql+asyncpg://aiops:aiops@localhost:5432/aiops"
     db_pool_size: int = 5

@@ -27,6 +27,7 @@ class PermissionKey(StrEnum):
     KUBERNETES_WRITE = "kubernetes:write"
     METRICS_READ = "metrics:read"
     PROMETHEUS_READ = "prometheus:read"
+    LOKI_READ = "loki:read"
     LOGS_READ = "logs:read"
     RCA_READ = "rca:read"
     RCA_CREATE = "rca:create"
@@ -71,6 +72,7 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         PermissionKey.KUBERNETES_WRITE.value,
         PermissionKey.METRICS_READ.value,
         PermissionKey.PROMETHEUS_READ.value,
+        PermissionKey.LOKI_READ.value,
         PermissionKey.LOGS_READ.value,
         PermissionKey.RCA_READ.value,
         PermissionKey.RCA_CREATE.value,
@@ -93,6 +95,7 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         PermissionKey.KUBERNETES_READ.value,
         PermissionKey.METRICS_READ.value,
         PermissionKey.PROMETHEUS_READ.value,
+        PermissionKey.LOKI_READ.value,
         PermissionKey.LOGS_READ.value,
         PermissionKey.RCA_READ.value,
         PermissionKey.RCA_CREATE.value,
