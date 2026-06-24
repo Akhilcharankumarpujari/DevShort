@@ -23,6 +23,7 @@ class PermissionKey(StrEnum):
     ALERTS_READ = "alerts:read"
     ALERTS_INGEST = "alerts:ingest"
     ALERTS_UPDATE = "alerts:update"
+    ALERTS_WRITE = "alerts:write"
     KUBERNETES_READ = "kubernetes:read"
     KUBERNETES_WRITE = "kubernetes:write"
     METRICS_READ = "metrics:read"
@@ -68,6 +69,7 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         PermissionKey.ALERTS_READ.value,
         PermissionKey.ALERTS_INGEST.value,
         PermissionKey.ALERTS_UPDATE.value,
+        PermissionKey.ALERTS_WRITE.value,
         PermissionKey.KUBERNETES_READ.value,
         PermissionKey.KUBERNETES_WRITE.value,
         PermissionKey.METRICS_READ.value,
