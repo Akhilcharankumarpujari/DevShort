@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from enum import StrEnum
 
@@ -24,6 +24,7 @@ class PermissionKey(StrEnum):
     ALERTS_INGEST = "alerts:ingest"
     ALERTS_UPDATE = "alerts:update"
     KUBERNETES_READ = "kubernetes:read"
+    KUBERNETES_WRITE = "kubernetes:write"
     METRICS_READ = "metrics:read"
     LOGS_READ = "logs:read"
     RCA_READ = "rca:read"
@@ -66,6 +67,7 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         PermissionKey.ALERTS_INGEST.value,
         PermissionKey.ALERTS_UPDATE.value,
         PermissionKey.KUBERNETES_READ.value,
+        PermissionKey.KUBERNETES_WRITE.value,
         PermissionKey.METRICS_READ.value,
         PermissionKey.LOGS_READ.value,
         PermissionKey.RCA_READ.value,
