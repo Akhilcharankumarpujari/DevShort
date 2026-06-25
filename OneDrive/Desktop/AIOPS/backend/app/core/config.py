@@ -47,6 +47,22 @@ class Settings(BaseSettings):
     prometheus_url: str = "http://localhost:9090"
     loki_url: str = "http://localhost:3100"
 
+    # Jenkins settings
+    jenkins_url: str = "http://localhost:8080"
+    jenkins_username: str = ""
+    jenkins_api_token: SecretStr | None = None
+    jenkins_request_timeout: int = 30
+
+    # AI Provider settings
+    ai_provider: str = "ollama"  # "openai" or "ollama"
+    openai_api_key: SecretStr | None = None
+    openai_model: str = "gpt-4o"
+    openai_api_url: str = "https://api.openai.com/v1"
+    ollama_url: str = "http://localhost:11434"
+    ollama_model: str = "llama3"
+    ai_request_timeout: int = 120
+    ai_max_retries: int = 2
+
     database_url: str = "postgresql+asyncpg://aiops:aiops@localhost:5432/aiops"
     db_pool_size: int = 5
     db_max_overflow: int = 10

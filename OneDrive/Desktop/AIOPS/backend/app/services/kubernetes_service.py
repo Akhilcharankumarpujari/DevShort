@@ -7,7 +7,7 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Any, cast
 
-from kubernetes.client.exceptions import ApiException  # type: ignore
+from kubernetes.client.exceptions import ApiException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.kubernetes_agent import KubernetesAgent

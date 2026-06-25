@@ -44,6 +44,11 @@ class PermissionKey(StrEnum):
     INTEGRATIONS_SYNC = "integrations:sync"
     DASHBOARDS_READ = "dashboards:read"
     AUDIT_LOGS_READ = "audit_logs:read"
+    AI_READ = "ai:read"
+    AI_ANALYZE = "ai:analyze"
+    JENKINS_READ = "jenkins:read"
+    JENKINS_WRITE = "jenkins:write"
+    JENKINS_ANALYZE = "jenkins:analyze"
 
 
 ALL_PERMISSIONS = {permission.value for permission in PermissionKey}
@@ -87,6 +92,11 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         PermissionKey.INTEGRATIONS_SYNC.value,
         PermissionKey.DASHBOARDS_READ.value,
         PermissionKey.AUDIT_LOGS_READ.value,
+        PermissionKey.AI_READ.value,
+        PermissionKey.AI_ANALYZE.value,
+        PermissionKey.JENKINS_READ.value,
+        PermissionKey.JENKINS_WRITE.value,
+        PermissionKey.JENKINS_ANALYZE.value,
     },
     RoleName.DEVELOPER.value: {
         PermissionKey.INCIDENTS_READ.value,
@@ -104,6 +114,11 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         PermissionKey.REMEDIATION_READ.value,
         PermissionKey.REMEDIATION_EXECUTE.value,
         PermissionKey.DASHBOARDS_READ.value,
+        PermissionKey.AI_READ.value,
+        PermissionKey.AI_ANALYZE.value,
+        PermissionKey.JENKINS_READ.value,
+        PermissionKey.JENKINS_WRITE.value,
+        PermissionKey.JENKINS_ANALYZE.value,
     },
     RoleName.VIEWER.value: set(READ_ONLY_PERMISSIONS),
 }

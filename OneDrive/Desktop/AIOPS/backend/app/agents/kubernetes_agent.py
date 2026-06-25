@@ -3,8 +3,8 @@ from __future__ import annotations
 import datetime
 import logging
 from typing import Any
-from kubernetes import client, config  # type: ignore
-from kubernetes.client.exceptions import ApiException  # type: ignore
+from kubernetes import client, config
+from kubernetes.client.exceptions import ApiException
 
 logger = logging.getLogger(__name__)
 
