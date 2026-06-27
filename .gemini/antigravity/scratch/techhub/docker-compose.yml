@@ -1,0 +1,171 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: techhub-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: techhub-api-gateway
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - PROJECT_NAME=TechHub API Gateway
+      - ENV=development
+      - LOG_LEVEL=INFO
+      - USER_SERVICE_URL=http://user-service:8000
+      - PRODUCT_SERVICE_URL=http://product-service:8000
+      - ORDER_SERVICE_URL=http://order-service:8000
+      - INVENTORY_SERVICE_URL=http://inventory-service:8000
+      - PAYMENT_SERVICE_URL=http://payment-service:8000
+    depends_on:
+      user-service:
+        condition: service_started
+      product-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: techhub-user-service
+    restart: always
+    ports:
+      - "8001:8000"
+    environment:
+      - PROJECT_NAME=TechHub User Service
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/techhub_users
+      - ENV=development
+      - LOG_LEVEL=INFO
+      - SECRET_KEY=8810df66a3ea68a8dc4e7a8848f02931a54160de4698de29b222959828d9c6c5
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - REFRESH_TOKEN_EXPIRE_DAYS=7
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  product-service:
+    build:
+      context: ./product-service
+      dockerfile: Dockerfile
+    container_name: techhub-product-service
+    restart: always
+    ports:
+      - "8002:8000"
+    environment:
+      - PROJECT_NAME=TechHub Product Service
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/techhub_products
+      - ENV=development
+      - LOG_LEVEL=INFO
+      - SECRET_KEY=8810df66a3ea68a8dc4e7a8848f02931a54160de4698de29b222959828d9c6c5
+      - ALGORITHM=HS256
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: techhub-order-service
+    restart: always
+    ports:
+      - "8003:8000"
+    environment:
+      - PROJECT_NAME=TechHub Order Service
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/techhub_orders
+      - ENV=development
+      - LOG_LEVEL=INFO
+      - SECRET_KEY=8810df66a3ea68a8dc4e7a8848f02931a54160de4698de29b222959828d9c6c5
+      - ALGORITHM=HS256
+      - PRODUCT_SERVICE_URL=http://product-service:8000
+      - INVENTORY_SERVICE_URL=http://inventory-service:8000
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  inventory-service:
+    build:
+      context: ./inventory-service
+      dockerfile: Dockerfile
+    container_name: techhub-inventory-service
+    restart: always
+    ports:
+      - "8004:8000"
+    environment:
+      - PROJECT_NAME=TechHub Inventory Service
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/techhub_inventory
+      - ENV=development
+      - LOG_LEVEL=INFO
+      - SECRET_KEY=8810df66a3ea68a8dc4e7a8848f02931a54160de4698de29b222959828d9c6c5
+      - ALGORITHM=HS256
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    container_name: techhub-payment-service
+    restart: always
+    ports:
+      - "8005:8000"
+    environment:
+      - PROJECT_NAME=TechHub Payment Service
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/techhub_payments
+      - ENV=development
+      - LOG_LEVEL=INFO
+      - SECRET_KEY=8810df66a3ea68a8dc4e7a8848f02931a54160de4698de29b222959828d9c6c5
+      - ALGORITHM=HS256
+      - ORDER_SERVICE_URL=http://order-service:8000
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: techhub-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - api-gateway
+
+volumes:
+  db-data:
