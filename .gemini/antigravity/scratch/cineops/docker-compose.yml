@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  # Databases
+  user-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cineops_users
+    volumes:
+      - user_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cineops_users"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  movie-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cineops_movies
+    volumes:
+      - movie_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cineops_movies"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  booking-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cineops_bookings
+    volumes:
+      - booking_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cineops_bookings"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  payment-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cineops_payments
+    volumes:
+      - payment_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cineops_payments"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  notification-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cineops_notifications
+    volumes:
+      - notification_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cineops_notifications"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Microservices
+  user-service:
+    build: ./user-service
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@user-db:5432/cineops_users
+    depends_on:
+      user-db:
+        condition: service_healthy
+
+  movie-service:
+    build: ./movie-service
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@movie-db:5432/cineops_movies
+    depends_on:
+      movie-db:
+        condition: service_healthy
+
+  booking-service:
+    build: ./booking-service
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@booking-db:5432/cineops_bookings
+    depends_on:
+      booking-db:
+        condition: service_healthy
+
+  payment-service:
+    build: ./payment-service
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@payment-db:5432/cineops_payments
+    depends_on:
+      payment-db:
+        condition: service_healthy
+
+  notification-service:
+    build: ./notification-service
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@notification-db:5432/cineops_notifications
+    depends_on:
+      notification-db:
+        condition: service_healthy
+
+  api-gateway:
+    build: ./api-gateway
+    environment:
+      USER_SERVICE_URL: http://user-service:8000
+      MOVIE_SERVICE_URL: http://movie-service:8000
+      BOOKING_SERVICE_URL: http://booking-service:8000
+      PAYMENT_SERVICE_URL: http://payment-service:8000
+      NOTIFICATION_SERVICE_URL: http://notification-service:8000
+    depends_on:
+      - user-service
+      - movie-service
+      - booking-service
+      - payment-service
+      - notification-service
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - api-gateway
+
+volumes:
+  user_db_data:
+  movie_db_data:
+  booking_db_data:
+  payment_db_data:
+  notification_db_data:

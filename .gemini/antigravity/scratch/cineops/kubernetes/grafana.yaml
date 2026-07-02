@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: monitoring
+data:
+  datasource.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus-server.monitoring.svc.cluster.local:80
+      isDefault: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-provisioning
+  namespace: monitoring
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: false
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-json
+  namespace: monitoring
+data:
+  cineops-infrastructure.json: '{"title": "CineOps Infrastructure", "uid": "cineops-infrastructure", "panels": [{"id": 1, "title": "Pod Status (Up/Down)", "type": "stat", "gridPos": {"x": 0, "y": 0, "w": 8, "h": 4}, "targets": [{"expr": "up{job=\"cineops-services\"}", "refId": "A", "legendFormat": "{{instance}}", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "options": {"graphMode": "area", "colorMode": "value", "justifyMode": "auto"}}, {"id": 2, "title": "CPU Usage by Service", "type": "timeseries", "gridPos": {"x": 8, "y": 0, "w": 8, "h": 4}, "targets": [{"expr": "sum(rate(process_cpu_seconds_total{job=\"cineops-services\"}[5m])) by (instance)", "refId": "A", "legendFormat": "{{instance}}", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "lineInterpolation": "smooth"}, "unit": "percent"}}}, {"id": 3, "title": "Memory Usage by Service", "type": "timeseries", "gridPos": {"x": 16, "y": 0, "w": 8, "h": 4}, "targets": [{"expr": "process_resident_memory_bytes{job=\"cineops-services\"}", "refId": "A", "legendFormat": "{{instance}}", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "lineInterpolation": "smooth"}, "unit": "bytes"}}}, {"id": 4, "title": "Node CPU Usage", "type": "timeseries", "gridPos": {"x": 0, "y": 4, "w": 12, "h": 4}, "targets": [{"expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[5m]))", "refId": "A", "legendFormat": "node-cpu", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "lineInterpolation": "smooth"}, "unit": "percent"}}}, {"id": 5, "title": "Node Memory Usage", "type": "timeseries", "gridPos": {"x": 12, "y": 4, "w": 12, "h": 4}, "targets": [{"expr": "node_memory_Active_bytes", "refId": "A", "legendFormat": "node-mem", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "lineInterpolation": "smooth"}, "unit": "bytes"}}}], "refresh": "5s", "schemaVersion": 39, "time": {"from": "now-15m", "to": "now"}}'
+  cineops-application.json: '{"title": "CineOps Application Metrics", "uid": "cineops-application", "panels": [{"id": 1, "title": "HTTP Request Rate (Total)", "type": "timeseries", "gridPos": {"x": 0, "y": 0, "w": 8, "h": 4}, "targets": [{"expr": "sum(rate(cineops_http_requests_total[5m]))", "refId": "A", "legendFormat": "total-requests", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "lineInterpolation": "smooth"}, "unit": "reqps"}}}, {"id": 2, "title": "Request Rate by Service & Status", "type": "timeseries", "gridPos": {"x": 8, "y": 0, "w": 8, "h": 4}, "targets": [{"expr": "sum(rate(cineops_http_requests_total[5m])) by (service, status_code)", "refId": "A", "legendFormat": "{{service}} - {{status_code}}", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "lineInterpolation": "smooth"}, "unit": "reqps"}}}, {"id": 3, "title": "Error Rate (5xx %)", "type": "stat", "gridPos": {"x": 16, "y": 0, "w": 8, "h": 4}, "targets": [{"expr": "sum(rate(cineops_http_requests_total{status_code=~\"5..\"}[5m])) / sum(rate(cineops_http_requests_total[5m])) * 100", "refId": "A", "legendFormat": "error-rate", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "options": {"graphMode": "area", "colorMode": "value", "justifyMode": "auto"}}, {"id": 4, "title": "P95 Request Latency", "type": "timeseries", "gridPos": {"x": 0, "y": 4, "w": 12, "h": 4}, "targets": [{"expr": "histogram_quantile(0.95, sum(rate(cineops_http_request_duration_seconds_bucket[5m])) by (le))", "refId": "A", "legendFormat": "p95", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "lineInterpolation": "smooth"}, "unit": "s"}}}, {"id": 5, "title": "P99 Request Latency", "type": "timeseries", "gridPos": {"x": 12, "y": 4, "w": 12, "h": 4}, "targets": [{"expr": "histogram_quantile(0.99, sum(rate(cineops_http_request_duration_seconds_bucket[5m])) by (le))", "refId": "A", "legendFormat": "p99", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "lineInterpolation": "smooth"}, "unit": "s"}}}], "refresh": "5s", "schemaVersion": 39, "time": {"from": "now-15m", "to": "now"}}'
+  cineops-business.json: '{"title": "CineOps Business Metrics", "uid": "cineops-business", "panels": [{"id": 1, "title": "Movies Viewed / Searched Rate", "type": "timeseries", "gridPos": {"x": 0, "y": 0, "w": 12, "h": 4}, "targets": [{"expr": "sum(rate(cineops_http_requests_total{path=~\"/api/v1/movies.*\"}[5m]))", "refId": "A", "legendFormat": "movies-viewed", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "lineInterpolation": "smooth"}, "unit": "ops"}}}, {"id": 2, "title": "Ticket Bookings Attempts (Total)", "type": "stat", "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4}, "targets": [{"expr": "sum(bookings_total)", "refId": "A", "legendFormat": "bookings", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "options": {"graphMode": "area", "colorMode": "value", "justifyMode": "auto"}}, {"id": 3, "title": "Successful Bookings (Total)", "type": "stat", "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4}, "targets": [{"expr": "sum(booking_success_total)", "refId": "A", "legendFormat": "booking-success", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "options": {"graphMode": "area", "colorMode": "value", "justifyMode": "auto"}}, {"id": 4, "title": "Payment Success Rate (%)", "type": "stat", "gridPos": {"x": 0, "y": 4, "w": 8, "h": 4}, "targets": [{"expr": "sum(payment_success_total) / sum(payments_total) * 100", "refId": "A", "legendFormat": "success-rate", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "options": {"graphMode": "area", "colorMode": "value", "justifyMode": "auto"}}, {"id": 5, "title": "Payment Failures", "type": "timeseries", "gridPos": {"x": 8, "y": 4, "w": 8, "h": 4}, "targets": [{"expr": "sum(rate(payment_failure_total[5m]))", "refId": "A", "legendFormat": "failures", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "lineInterpolation": "smooth"}, "unit": "ops"}}}, {"id": 6, "title": "Notifications Sent (Total)", "type": "stat", "gridPos": {"x": 16, "y": 4, "w": 8, "h": 4}, "targets": [{"expr": "sum(notifications_total)", "refId": "A", "legendFormat": "notifications", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "options": {"graphMode": "area", "colorMode": "value", "justifyMode": "auto"}}], "refresh": "5s", "schemaVersion": 39, "time": {"from": "now-15m", "to": "now"}}'
+  cineops-microservice.json: '{"title": "CineOps Microservice Metrics", "uid": "cineops-microservice", "panels": [{"id": 1, "title": "HTTP Request Rate (Selected Service)", "type": "timeseries", "gridPos": {"x": 0, "y": 0, "w": 12, "h": 4}, "targets": [{"expr": "sum(rate(cineops_http_requests_total{service=\"$service\"}[5m])) by (path, method, status_code)", "refId": "A", "legendFormat": "{{method}} {{path}} - {{status_code}}", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "lineInterpolation": "smooth"}, "unit": "reqps"}}}, {"id": 2, "title": "Request Latency P95 (Selected Service)", "type": "timeseries", "gridPos": {"x": 12, "y": 0, "w": 12, "h": 4}, "targets": [{"expr": "histogram_quantile(0.95, sum(rate(cineops_http_request_duration_seconds_bucket{service=\"$service\"}[5m])) by (le))", "refId": "A", "legendFormat": "p95", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "lineInterpolation": "smooth"}, "unit": "s"}}}, {"id": 3, "title": "CPU Usage (Selected Service)", "type": "timeseries", "gridPos": {"x": 0, "y": 4, "w": 12, "h": 4}, "targets": [{"expr": "sum(rate(process_cpu_seconds_total{instance=~\"$service:.*\"}[5m]))", "refId": "A", "legendFormat": "cpu-usage", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "lineInterpolation": "smooth"}, "unit": "percent"}}}, {"id": 4, "title": "Memory Usage (Selected Service)", "type": "timeseries", "gridPos": {"x": 12, "y": 4, "w": 12, "h": 4}, "targets": [{"expr": "process_resident_memory_bytes{instance=~\"$service:.*\"}", "refId": "A", "legendFormat": "memory-usage", "datasource": {"type": "prometheus", "uid": "Prometheus"}}], "datasource": {"type": "prometheus", "uid": "Prometheus"}, "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "lineInterpolation": "smooth"}, "unit": "bytes"}}}], "refresh": "5s", "schemaVersion": 39, "templating": {"list": [{"name": "service", "type": "query", "query": "label_values(cineops_http_requests_total, service)", "datasource": {"type": "prometheus", "uid": "Prometheus"}, "refresh": 1, "sort": 1, "includeAll": false, "multi": false}]}, "time": {"from": "now-15m", "to": "now"}}'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:10.4.1
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "admin"
+        volumeMounts:
+        - name: grafana-storage
+          mountPath: /var/lib/grafana
+        - name: datasource-provisioning
+          mountPath: /etc/grafana/provisioning/datasources
+        - name: dashboard-provisioning
+          mountPath: /etc/grafana/provisioning/dashboards
+        - name: dashboard-jsons
+          mountPath: /var/lib/grafana/dashboards
+      volumes:
+      - name: grafana-storage
+        emptyDir: {}
+      - name: datasource-provisioning
+        configMap:
+          name: grafana-datasources
+      - name: dashboard-provisioning
+        configMap:
+          name: grafana-dashboards-provisioning
+      - name: dashboard-jsons
+        configMap:
+          name: grafana-dashboards-json
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 3000
+    nodePort: 32300
+  selector:
+    app: grafana

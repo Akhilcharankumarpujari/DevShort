@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  user-db:
+    ports:
+      - "5431:5432"
+
+  movie-db:
+    ports:
+      - "5432:5432"
+
+  booking-db:
+    ports:
+      - "5433:5432"
+
+  payment-db:
+    ports:
+      - "5434:5432"
+
+  notification-db:
+    ports:
+      - "5435:5432"
+
+  user-service:
+    ports:
+      - "8001:8000"
+
+  movie-service:
+    ports:
+      - "8002:8000"
+
+  booking-service:
+    ports:
+      - "8003:8000"
+
+  payment-service:
+    ports:
+      - "8004:8000"
+
+  notification-service:
+    ports:
+      - "8005:8000"
+
+  api-gateway:
+    ports:
+      - "8000:8000"
+
+  frontend:
+    ports:
+      - "3000:3000"

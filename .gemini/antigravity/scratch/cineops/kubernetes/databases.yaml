@@ -1,0 +1,248 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-secrets
+type: Opaque
+data:
+  # "postgres" base64 encoded is cG9zdGdyZXM=
+  postgres-password: cG9zdGdyZXM=
+---
+# User Database
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-db
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: user-db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-db
+  template:
+    metadata:
+      labels:
+        app: user-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: postgres-password
+            - name: POSTGRES_DB
+              value: cineops_users
+          ports:
+            - containerPort: 5432
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+---
+# Movie Database
+apiVersion: v1
+kind: Service
+metadata:
+  name: movie-db
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: movie-db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movie-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: movie-db
+  template:
+    metadata:
+      labels:
+        app: movie-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: postgres-password
+            - name: POSTGRES_DB
+              value: cineops_movies
+          ports:
+            - containerPort: 5432
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+---
+# Booking Database
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-db
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: booking-db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booking-db
+  template:
+    metadata:
+      labels:
+        app: booking-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: postgres-password
+            - name: POSTGRES_DB
+              value: cineops_bookings
+          ports:
+            - containerPort: 5432
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+---
+# Payment Database
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-db
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: payment-db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-db
+  template:
+    metadata:
+      labels:
+        app: payment-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: postgres-password
+            - name: POSTGRES_DB
+              value: cineops_payments
+          ports:
+            - containerPort: 5432
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+---
+# Notification Database
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-db
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: notification-db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-db
+  template:
+    metadata:
+      labels:
+        app: notification-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: postgres-password
+            - name: POSTGRES_DB
+              value: cineops_notifications
+          ports:
+            - containerPort: 5432
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "100m"
+              memory: "256Mi"

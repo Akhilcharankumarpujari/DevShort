@@ -1,0 +1,431 @@
+# User Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+spec:
+  ports:
+    - port: 8000
+      targetPort: 8000
+  selector:
+    app: user-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: user-service
+          image: cineops-user-service:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DATABASE_URL
+              value: postgresql://postgres:postgres@user-db:5432/cineops_users
+          ports:
+            - containerPort: 8000
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+
+---
+# Movie Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: movie-service
+spec:
+  ports:
+    - port: 8000
+      targetPort: 8000
+  selector:
+    app: movie-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movie-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: movie-service
+  template:
+    metadata:
+      labels:
+        app: movie-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: movie-service
+          image: cineops-movie-service:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DATABASE_URL
+              value: postgresql://postgres:postgres@movie-db:5432/cineops_movies
+          ports:
+            - containerPort: 8000
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+
+---
+# Booking Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-service
+spec:
+  ports:
+    - port: 8000
+      targetPort: 8000
+  selector:
+    app: booking-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booking-service
+  template:
+    metadata:
+      labels:
+        app: booking-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: booking-service
+          image: cineops-booking-service:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DATABASE_URL
+              value: postgresql://postgres:postgres@booking-db:5432/cineops_bookings
+            - name: MOVIE_SERVICE_URL
+              value: http://movie-service:8000
+          ports:
+            - containerPort: 8000
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+
+---
+# Payment Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+spec:
+  ports:
+    - port: 8000
+      targetPort: 8000
+  selector:
+    app: payment-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: payment-service
+          image: cineops-payment-service:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DATABASE_URL
+              value: postgresql://postgres:postgres@payment-db:5432/cineops_payments
+            - name: BOOKING_SERVICE_URL
+              value: http://booking-service:8000
+          ports:
+            - containerPort: 8000
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+
+---
+# Notification Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+spec:
+  ports:
+    - port: 8000
+      targetPort: 8000
+  selector:
+    app: notification-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: notification-service
+          image: cineops-notification-service:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DATABASE_URL
+              value: postgresql://postgres:postgres@notification-db:5432/cineops_notifications
+            - name: BOOKING_SERVICE_URL
+              value: http://booking-service:8000
+            - name: PAYMENT_SERVICE_URL
+              value: http://payment-service:8000
+          ports:
+            - containerPort: 8000
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+
+---
+# API Gateway
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+spec:
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30080
+  type: NodePort
+  selector:
+    app: api-gateway
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: api-gateway
+          image: cineops-api-gateway:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: USER_SERVICE_URL
+              value: http://user-service:8000
+            - name: MOVIE_SERVICE_URL
+              value: http://movie-service:8000
+            - name: BOOKING_SERVICE_URL
+              value: http://booking-service:8000
+            - name: PAYMENT_SERVICE_URL
+              value: http://payment-service:8000
+            - name: NOTIFICATION_SERVICE_URL
+              value: http://notification-service:8000
+          ports:
+            - containerPort: 8000
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+
+---
+# Frontend
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30300
+  type: NodePort
+  selector:
+    app: frontend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: cineops-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
