@@ -1,0 +1,26 @@
+server:
+  port: 8080
+  env: development
+  request_timeout: 30s
+
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: postgrespassword
+  dbname: zidoc
+  sslmode: disable
+  max_open_conns: 25
+  max_idle_conns: 25
+  conn_max_lifetime: 5m
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+  pool_size: 10
+
+logging:
+  level: debug
+  format: json

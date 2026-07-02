@@ -1,0 +1,122 @@
+name: Zidoc CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  lint:
+    name: Code Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run Backend Lint Checker
+        run: |
+          cd apps/api
+          go vet ./...
+
+      - name: Install Frontend Dependencies & Lint
+        run: |
+          cd apps/web
+          npm ci
+          npm run lint
+
+  test:
+    name: Code Verification & Testing
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Backend Unit Tests
+        run: |
+          cd apps/api
+          go test -v ./...
+
+      - name: Run Frontend Unit Tests
+        run: |
+          cd apps/web
+          npm ci
+          npm run test
+
+      - name: Run AI Service Tests
+        run: |
+          cd apps/ai-service
+          pip install -r requirements.txt
+          pytest
+
+  build:
+    name: Compilation & Verification Build
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build Go API
+        run: |
+          cd apps/api
+          go build -o main .
+
+      - name: Build React Web App
+        run: |
+          cd apps/web
+          npm ci
+          npm run build
+
+  docker-build:
+    name: Container Integration Verification
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Verify Go API Container Build
+        run: docker build -t zidoc-api:test ./apps/api
+
+      - name: Verify React Web Container Build
+        run: docker build -t zidoc-web:test ./apps/web
+
+      - name: Verify FastAPI Container Build
+        run: docker build -t zidoc-ai-service:test ./apps/ai-service

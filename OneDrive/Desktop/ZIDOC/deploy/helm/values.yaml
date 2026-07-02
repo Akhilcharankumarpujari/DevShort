@@ -1,0 +1,32 @@
+global:
+  environment: production
+
+web:
+  replicaCount: 2
+  image:
+    repository: zidoc-web
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+
+api:
+  replicaCount: 2
+  image:
+    repository: zidoc-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+
+aiService:
+  replicaCount: 1
+  image:
+    repository: zidoc-ai-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
