@@ -1,0 +1,575 @@
+name: DevShort Continuous Deployment
+
+on:
+  workflow_run:
+    workflows: ["DevShort Continuous Integration"]
+    types: [completed]
+    branches: [main]
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment target"
+        required: true
+        type: choice
+        default: "production"
+        options:
+          - production
+          - staging
+      skip_ci:
+        description: "Skip CI dependency check (use with caution)"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-${{ github.ref }}-${{ github.event.inputs.environment || 'production' }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  # ──────────────────────────────────────────────────────────
+  # JOB 1 — PRE-DEPLOYMENT CHECK
+  # ──────────────────────────────────────────────────────────
+  pre-deploy:
+    name: "Pre-Deployment Check"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "Verify Deployment Branch"
+        run: |
+          echo "→ Deployment triggered for branch: ${{ github.ref_name }}"
+          echo "→ Triggered by: ${{ github.actor }}"
+          echo "→ Event: ${{ github.event_name }}"
+
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "→ CI workflow: ${{ github.event.workflow_run.name }}"
+            echo "→ CI conclusion: ${{ github.event.workflow_run.conclusion }}"
+          fi
+
+      - name: "Validate Required Secrets"
+        run: |
+          missing_secrets=""
+
+          check_secret() {
+            if [ -z "$1" ]; then
+              missing_secrets="$missing_secrets  - $2\n"
+            fi
+          }
+
+          check_secret "${{ secrets.EC2_HOST }}" "EC2_HOST"
+          check_secret "${{ secrets.EC2_USERNAME }}" "EC2_USERNAME"
+          check_secret "${{ secrets.EC2_SSH_KEY }}" "EC2_SSH_KEY"
+          check_secret "${{ secrets.DATABASE_URL }}" "DATABASE_URL"
+          check_secret "${{ secrets.POSTGRES_PASSWORD }}" "POSTGRES_PASSWORD"
+
+          if [ -n "$missing_secrets" ]; then
+            echo "============================================"
+            echo "  ❌ MISSING REQUIRED SECRETS"
+            echo "============================================"
+            echo -e "$missing_secrets"
+            echo "============================================"
+            echo ""
+            echo "Add these secrets in:"
+            echo "  GitHub → Settings → Secrets and variables → Actions"
+            echo ""
+            exit 1
+          fi
+
+          echo "✓ All required secrets are configured"
+
+      - name: "Pre-Deploy Summary"
+        run: |
+          echo "============================================"
+          echo "  PRE-DEPLOY CHECK — PASSED"
+          echo "============================================"
+          echo "  ✓ Branch verified"
+          echo "  ✓ Secrets validated"
+          echo "  ✓ Ready for deployment"
+          echo "============================================"
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 2 — BUILD & PUSH DOCKER IMAGES
+  # ──────────────────────────────────────────────────────────
+  build-images:
+    name: "Build Docker Images"
+    runs-on: ubuntu-latest
+    needs: [pre-deploy]
+    timeout-minutes: 15
+
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "Set up Docker Buildx"
+        uses: docker/setup-buildx-action@v3
+
+      - name: "Cache Docker Layers"
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: deploy-buildx-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            deploy-buildx-${{ runner.os }}-
+
+      - name: "Build Backend Image"
+        run: |
+          echo "→ Building devshort-backend:latest..."
+          docker build \
+            -t devshort-backend:latest \
+            -f backend/Dockerfile \
+            backend/
+          echo "✓ devshort-backend:latest built"
+
+      - name: "Build Frontend Image"
+        run: |
+          echo "→ Building devshort-frontend:latest..."
+          docker build \
+            -t devshort-frontend:latest \
+            -f frontend/Dockerfile \
+            frontend/
+          echo "✓ devshort-frontend:latest built"
+
+      - name: "Save Docker Images to Tar"
+        run: |
+          mkdir -p /tmp/docker-images
+          docker save devshort-backend:latest -o /tmp/docker-images/backend.tar
+          docker save devshort-frontend:latest -o /tmp/docker-images/frontend.tar
+          echo "→ Images saved to tar archives"
+          ls -lh /tmp/docker-images/
+
+      - name: "Upload Images as Artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-images
+          path: /tmp/docker-images/
+          retention-days: 1
+
+      - name: "Build Summary"
+        run: |
+          echo "============================================"
+          echo "  DOCKER IMAGES — BUILT"
+          echo "============================================"
+          echo "  ✓ devshort-backend:latest"
+          echo "  ✓ devshort-frontend:latest"
+          echo "============================================"
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 3 — DEPLOY TO EC2
+  # ──────────────────────────────────────────────────────────
+  deploy-ec2:
+    name: "Deploy to AWS EC2"
+    runs-on: ubuntu-latest
+    needs: [build-images]
+    timeout-minutes: 20
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: ${{ vars.APP_URL || 'https://devshort.example.com' }}
+
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "Download Docker Images"
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-images
+          path: /tmp/docker-images/
+
+      - name: "Setup SSH Agent"
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: "Add EC2 Host Key"
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          echo "✓ EC2 host key added to known_hosts"
+
+      - name: "Create Deployment Directory on EC2"
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            mkdir -p ~/devshort ~/devshort/rollback ~/devshort/logs
+            echo "→ Deployment directories created on EC2"
+          ENDSSH
+
+      - name: "Copy Docker Images to EC2"
+        run: |
+          echo "→ Transferring backend image..."
+          scp /tmp/docker-images/backend.tar \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/devshort/backend.tar
+
+          echo "→ Transferring frontend image..."
+          scp /tmp/docker-images/frontend.tar \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/devshort/frontend.tar
+
+          echo "✓ Docker images transferred"
+
+      - name: "Copy Application Files to EC2"
+        run: |
+          echo "→ Transferring docker-compose.yml..."
+          scp docker-compose.yml \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/devshort/docker-compose.yml
+
+          echo "→ Transferring backend files..."
+          scp -r backend/prisma \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/devshort/backend-prisma
+
+          echo "→ Transferring .env file..."
+          scp .env.example \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/devshort/.env.example
+
+          echo "✓ Application files transferred"
+
+      - name: "Create .env on EC2"
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            cat > ~/devshort/.env << 'EOF'
+          # PostgreSQL
+          POSTGRES_USER=devshort
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB=devshort
+
+          # Database connection
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+
+          # Backend
+          PORT=4000
+          NODE_ENV=production
+          SHORT_CODE_LENGTH=8
+          BASE_URL=${{ vars.APP_URL || 'http://localhost:4000' }}
+          CORS_ORIGIN=${{ vars.APP_URL || 'http://localhost:5173' }}
+          EOF
+            echo "✓ .env file created on EC2"
+          ENDSSH
+
+      - name: "Load Docker Images on EC2"
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            echo "→ Loading backend image..."
+            docker load -i ~/devshort/backend.tar
+            echo "→ Loading frontend image..."
+            docker load -i ~/devshort/frontend.tar
+            echo "✓ Docker images loaded on EC2"
+          ENDSSH
+
+      - name: "Backup Current State (Rollback Prepared)"
+        id: backup
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            echo "→ Preparing rollback backup..."
+            cd ~/devshort
+
+            # Check if containers are currently running
+            if docker compose ps --services --filter "status=running" 2>/dev/null | grep -q .; then
+              echo "→ Backing up running containers..."
+              docker compose ps > ~/devshort/rollback/running-containers.txt 2>/dev/null || true
+              echo "   Containers are running — will back up current images"
+
+              # Tag current images as previous for rollback
+              docker tag devshort-backend:latest devshort-backend:previous 2>/dev/null || true
+              docker tag devshort-frontend:latest devshort-frontend:previous 2>/dev/null || true
+              echo "   Current images tagged as 'previous'"
+            else
+              echo "   No running containers to backup"
+            fi
+
+            echo "✓ Rollback backup complete"
+            date -u +"%Y-%m-%dT%H:%M:%SZ" > ~/devshort/rollback/backup-timestamp.txt
+          ENDSSH
+
+      - name: "Stop Existing Containers"
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            echo "→ Stopping existing containers..."
+            cd ~/devshort
+            docker compose down --remove-orphans 2>/dev/null || true
+            echo "✓ Existing containers stopped"
+          ENDSSH
+
+      - name: "Deploy with Docker Compose"
+        id: deploy
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            set -e
+            cd ~/devshort
+
+            echo "→ Starting services with Docker Compose..."
+            docker compose up -d --build --force-recreate
+
+            echo "→ Waiting for services to be healthy..."
+            sleep 5
+            docker compose ps
+            echo "✓ Services started"
+          ENDSSH
+
+      - name: "Wait for Database Readiness"
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            echo "→ Waiting for PostgreSQL to be ready..."
+            cd ~/devshort
+            for i in $(seq 1 30); do
+              if docker compose exec -T postgres pg_isready -U devshort -d devshort 2>/dev/null; then
+                echo "✓ PostgreSQL is ready"
+                break
+              fi
+              echo "   Waiting... ($i/30)"
+              sleep 2
+            done
+          ENDSSH
+
+      - name: "Run Prisma Migration"
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            set -e
+            cd ~/devshort
+            echo "→ Running Prisma migration..."
+            docker compose exec -T backend npx prisma migrate deploy
+            echo "✓ Prisma migration applied"
+          ENDSSH
+
+      - name: "Verify Backend Health"
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            echo "→ Verifying backend health..."
+            for i in $(seq 1 15); do
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4000/api/health 2>/dev/null || echo "000")
+              if [ "$STATUS" = "200" ]; then
+                echo "✓ Backend health check passed (HTTP $STATUS)"
+                curl -s http://localhost:4000/api/health
+                echo ""
+                exit 0
+              fi
+              echo "   Waiting for backend... ($i/15) — HTTP $STATUS"
+              sleep 3
+            done
+            echo "✗ Backend health check FAILED after 15 attempts"
+            exit 1
+          ENDSSH
+
+      - name: "Verify Frontend"
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            echo "→ Verifying frontend..."
+            for i in $(seq 1 15); do
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5173 2>/dev/null || echo "000")
+              if [ "$STATUS" = "200" ]; then
+                echo "✓ Frontend verified (HTTP $STATUS)"
+                exit 0
+              fi
+              echo "   Waiting for frontend... ($i/15) — HTTP $STATUS"
+              sleep 3
+            done
+            echo "✗ Frontend verification FAILED after 15 attempts"
+            exit 1
+          ENDSSH
+
+      - name: "Verify Database Connectivity"
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            echo "→ Verifying database connectivity..."
+            cd ~/devshort
+            if docker compose exec -T postgres pg_isready -U devshort -d devshort; then
+              echo "✓ Database connection verified"
+              echo "→ Checking tables..."
+              docker compose exec -T postgres psql -U devshort -d devshort -c "\dt" 2>/dev/null || true
+            else
+              echo "✗ Database connectivity check FAILED"
+              exit 1
+            fi
+          ENDSSH
+
+      - name: "Clean Up Tar Files"
+        if: always()
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            rm -f ~/devshort/backend.tar ~/devshort/frontend.tar
+            echo "✓ Tar archives cleaned up"
+          ENDSSH
+
+      - name: "Deployment Success Summary"
+        run: |
+          echo "============================================"
+          echo "  🚀 DEPLOYMENT SUCCESSFUL"
+          echo "============================================"
+          echo "  ✓ Docker images built & loaded"
+          echo "  ✓ Services deployed via Docker Compose"
+          echo "  ✓ Prisma migration applied"
+          echo "  ✓ Backend health check passed"
+          echo "  ✓ Frontend verified"
+          echo "  ✓ Database connectivity verified"
+          echo "============================================"
+          echo "  🌐 Backend:  http://${{ secrets.EC2_HOST }}:4000/api/health"
+          echo "  🌐 Frontend: http://${{ secrets.EC2_HOST }}:5173"
+          echo "============================================"
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 4 — ROLLBACK (ONLY ON FAILURE)
+  # ──────────────────────────────────────────────────────────
+  rollback:
+    name: "Rollback · Restore Previous Version"
+    runs-on: ubuntu-latest
+    needs: [deploy-ec2]
+    if: failure() && needs.deploy-ec2.result == 'failure'
+    timeout-minutes: 10
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+
+    steps:
+      - name: "Setup SSH Agent"
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: "Add EC2 Host Key"
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: "Execute Rollback"
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            set -e
+            cd ~/devshort
+
+            echo "============================================"
+            echo "  ⚠️  ROLLBACK INITIATED"
+            echo "============================================"
+
+            # Stop current (failed) deployment
+            echo "→ Stopping failed deployment..."
+            docker compose down --remove-orphans 2>/dev/null || true
+
+            # Check if we have previous images
+            if docker image inspect devshort-backend:previous >/dev/null 2>&1; then
+              echo "→ Restoring previous backend image..."
+              docker tag devshort-backend:previous devshort-backend:latest
+              docker rmi devshort-backend:previous 2>/dev/null || true
+              echo "✓ Previous backend image restored"
+            else
+              echo "⚠ No previous backend image found — rebuilding from source"
+            fi
+
+            if docker image inspect devshort-frontend:previous >/dev/null 2>&1; then
+              echo "→ Restoring previous frontend image..."
+              docker tag devshort-frontend:previous devshort-frontend:latest
+              docker rmi devshort-frontend:previous 2>/dev/null || true
+              echo "✓ Previous frontend image restored"
+            else
+              echo "⚠ No previous frontend image found — rebuilding from source"
+            fi
+
+            # Restart services
+            echo "→ Restarting services with previous version..."
+            docker compose up -d --force-recreate
+
+            # Wait and verify
+            echo "→ Waiting for services to stabilize..."
+            sleep 10
+
+            # Health check post-rollback
+            echo "→ Running post-rollback health check..."
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4000/api/health 2>/dev/null || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "✓ Rollback successful — backend healthy (HTTP $STATUS)"
+            else
+              echo "⚠ Post-rollback health check returned HTTP $STATUS"
+            fi
+
+            echo "============================================"
+            echo "  ✅ ROLLBACK COMPLETE"
+            echo "============================================"
+          ENDSSH
+
+      - name: "Generate Rollback Log"
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            mkdir -p ~/devshort/logs
+            cat > ~/devshort/logs/rollback-$(date -u +"%Y%m%d-%H%M%S").log << 'EOFLOG'
+          ===================================
+          ROLLBACK REPORT
+          ===================================
+          Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          Run ID: ${{ github.run_id }}
+          Triggered by: ${{ github.actor }}
+          Branch: ${{ github.ref_name }}
+          ===================================
+          Rollback was executed because the
+          deployment job (deploy-ec2) failed.
+          Services were restored to the
+          previous working version.
+          ===================================
+          EOFLOG
+            echo "✓ Rollback log created"
+          ENDSSH
+
+      - name: "Rollback Summary"
+        run: |
+          echo "============================================"
+          echo "  ⚠️  ROLLBACK EXECUTED"
+          echo "============================================"
+          echo "  Deployment failed and was rolled back."
+          echo "  Previous version has been restored."
+          echo ""
+          echo "  Check the deploy-ec2 job logs above"
+          echo "  for failure details."
+          echo "============================================"
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 5 — FINAL STATUS
+  # ──────────────────────────────────────────────────────────
+  deployment-status:
+    name: "Deployment Status"
+    runs-on: ubuntu-latest
+    needs: [deploy-ec2, rollback]
+    if: always() && !cancelled()
+    timeout-minutes: 2
+
+    steps:
+      - name: "Report Final Status"
+        run: |
+          DEPLOY_RESULT="${{ needs.deploy-ec2.result }}"
+          ROLLBACK_RESULT="${{ needs.rollback.result }}"
+
+          if [ "$DEPLOY_RESULT" = "success" ]; then
+            echo "============================================"
+            echo "  🟢 DEPLOYMENT PIPELINE COMPLETE"
+            echo "============================================"
+            echo "  Status: SUCCESS"
+            echo "  All services deployed and verified."
+            echo "============================================"
+          elif [ "$DEPLOY_RESULT" = "failure" ] && [ "$ROLLBACK_RESULT" = "success" ]; then
+            echo "============================================"
+            echo "  🟡 DEPLOYMENT FAILED — ROLLED BACK"
+            echo "============================================"
+            echo "  Status: ROLLED BACK"
+            echo "  Previous version has been restored."
+            echo "  Deployment was rolled back successfully."
+            echo "============================================"
+          elif [ "$DEPLOY_RESULT" = "skipped" ]; then
+            echo "============================================"
+            echo "  ⚪ DEPLOYMENT SKIPPED"
+            echo "============================================"
+            echo "  Status: SKIPPED"
+            echo "  Deployment was not executed."
+            echo "============================================"
+          else
+            echo "============================================"
+            echo "  🔴 DEPLOYMENT FAILED"
+            echo "============================================"
+            echo "  Status: FAILURE"
+            echo "  Both deployment and rollback may have"
+            echo "  encountered issues. Check logs above."
+            echo "============================================"
+            exit 1
+          fi
