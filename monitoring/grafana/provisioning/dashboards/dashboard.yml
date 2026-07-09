@@ -1,0 +1,19 @@
+# =============================================================================
+# Grafana Dashboard Provisioning
+# Auto-loads all dashboard JSON files from /var/lib/grafana/dashboards
+# No manual import required.
+# =============================================================================
+
+apiVersion: 1
+
+providers:
+  - name: "DevShort"
+    orgId: 1
+    folder: "DevShort"
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

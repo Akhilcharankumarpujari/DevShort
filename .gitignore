@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+backend/.env
+frontend/.env
+
+# Jenkins runtime
+jenkins_home/
+jenkins.war
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

@@ -1,0 +1,59 @@
+# =============================================================================
+# Prometheus Configuration — DevShort Monitoring Stack
+# =============================================================================
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+
+# ---------------------------------------------------------------------------
+# Alerting (placeholder — Alertmanager can be added later)
+# ---------------------------------------------------------------------------
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ["alertmanager:9093"]
+
+# ---------------------------------------------------------------------------
+# Rules
+# ---------------------------------------------------------------------------
+rule_files:
+  # - "/etc/prometheus/alerting-rules.yml"
+
+# ---------------------------------------------------------------------------
+# Scrape Targets
+# ---------------------------------------------------------------------------
+scrape_configs:
+  # ----- Prometheus self-scrape -----
+  - job_name: "prometheus"
+    static_configs:
+      - targets:
+          - "localhost:9090"
+
+  # ----- DevShort Backend -----
+  - job_name: "devshort-backend"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets:
+          - "backend:4000"
+    metric_relabel_configs:
+      # Keep only application-relevant metrics to reduce cardinality
+      - source_labels: [__name__]
+        regex: "devshort_.*|nodejs_.*|process_.*|up"
+        action: keep
+
+  # ----- Node Exporter (system metrics) -----
+  - job_name: "node-exporter"
+    static_configs:
+      - targets:
+          - "node-exporter:9100"
+    metric_relabel_configs:
+      # Keep relevant system metrics
+      - source_labels: [__name__]
+        regex: >-
+          node_cpu_seconds_total|node_memory_Mem.*|node_memory_Buffers_bytes|
+          node_memory_Cached_bytes|node_disk_.*|node_network_.*|
+          node_filesystem_.*|node_load.*|node_uptime_seconds|node_boot_time_seconds|
+          node_timex_.*|node_uname_info|node_os_info|up
+        action: keep
