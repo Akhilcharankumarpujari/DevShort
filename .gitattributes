@@ -1,0 +1,26 @@
+# Force Unix line endings for shell scripts (critical for Docker/Alpine compatibility)
+*.sh text eol=lf
+*.cjs text eol=lf
+
+# Other text files
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.prisma text eol=lf
+*.sql text eol=lf
+*.css text eol=lf
+*.conf text eol=lf
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+.env text eol=lf
+.gitignore text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.tar binary
+*.gz binary
