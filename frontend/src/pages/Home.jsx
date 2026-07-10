@@ -1,3 +1,6 @@
+import { useAuth } from "../context/AuthContext.jsx";
+import ShortenForm from "../components/ShortenForm.jsx";
+
 const features = [
   {
     icon: (
@@ -47,8 +50,11 @@ const features = [
 ];
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <div className="animate-[fadeIn_0.5s_ease-out]">
+      {/* Hero */}
       <section className="pt-20 pb-16 sm:pt-28 sm:pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/5 border border-primary/10 text-primary text-sm font-medium mb-8">
@@ -72,19 +78,28 @@ export default function Home() {
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a href="#cta" className="btn-primary text-lg px-8 py-3.5">
-              Get Started Free
-            </a>
-            <a
-              href="#features"
-              className="btn-secondary text-lg px-8 py-3.5"
-            >
-              Learn More
-            </a>
+            {isAuthenticated ? (
+              <a href="/dashboard" className="btn-primary text-lg px-8 py-3.5">
+                Go to Dashboard
+              </a>
+            ) : (
+              <>
+                <a href="/register" className="btn-primary text-lg px-8 py-3.5">
+                  Get Started Free
+                </a>
+                <a
+                  href="#features"
+                  className="btn-secondary text-lg px-8 py-3.5"
+                >
+                  Learn More
+                </a>
+              </>
+            )}
           </div>
         </div>
       </section>
 
+      {/* Features */}
       <section id="features" className="py-16 sm:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
@@ -118,27 +133,24 @@ export default function Home() {
         </div>
       </section>
 
+      {/* CTA with Shortener */}
       <section id="cta" className="py-16 sm:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-secondary p-10 sm:p-16 text-center">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-secondary p-10 sm:p-16">
             <div className="absolute inset-0 bg-black/10" />
             <div className="relative z-10">
-              <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
-                Ready to shorten your first link?
+              <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight text-center">
+                {isAuthenticated
+                  ? "Shorten another URL"
+                  : "Ready to shorten your first link?"}
               </h2>
-              <p className="mt-4 text-lg text-white/80 max-w-lg mx-auto">
-                Join thousands of developers and marketers who trust DevShort
-                for their URL management.
+              <p className="mt-4 text-lg text-white/80 max-w-lg mx-auto text-center">
+                {isAuthenticated
+                  ? "Create more short links and track their performance."
+                  : "Join thousands of developers and marketers who trust DevShort for their URL management."}
               </p>
-              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto">
-                <input
-                  type="url"
-                  placeholder="Paste your long URL here..."
-                  className="w-full px-5 py-3.5 rounded-xl bg-white text-text placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all"
-                />
-                <button className="w-full sm:w-auto btn-primary bg-white text-primary hover:bg-gray-50 hover:text-primary-700 whitespace-nowrap px-8 py-3.5">
-                  Shorten URL
-                </button>
+              <div className="mt-8 max-w-xl mx-auto">
+                <ShortenForm />
               </div>
             </div>
           </div>

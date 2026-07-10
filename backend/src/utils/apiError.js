@@ -25,4 +25,16 @@ class ConflictError extends ApiError {
   }
 }
 
-export { ApiError, NotFoundError, BadRequestError, ConflictError };
+class UnauthorizedError extends ApiError {
+  constructor(message = "Unauthorized") {
+    super(401, message);
+  }
+}
+
+class ForbiddenError extends ApiError {
+  constructor(message = "Forbidden") {
+    super(403, message);
+  }
+}
+
+export { ApiError, NotFoundError, BadRequestError, ConflictError, UnauthorizedError, ForbiddenError };

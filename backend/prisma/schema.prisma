@@ -7,14 +7,57 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Url {
-  id           String    @id @default(cuid())
-  originalUrl  String    @map("original_url")
-  shortCode    String    @unique @map("short_code")
-  clickCount   Int       @default(0) @map("click_count")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  lastClicked  DateTime? @map("last_clicked_at")
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
+  urls Url[]
+
+  @@map("users")
+}
+
+model Url {
+  id          String    @id @default(cuid())
+  originalUrl String    @map("original_url")
+  shortCode   String    @unique @map("short_code")
+  customAlias String?   @unique @map("custom_alias")
+  title       String?
+  clickCount  Int       @default(0) @map("click_count")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  lastClicked DateTime? @map("last_clicked_at")
+  expiresAt   DateTime? @map("expires_at")
+
+  userId      String?       @map("user_id")
+  user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  clickEvents ClickEvent[]
+
+  @@index([userId])
+  @@index([shortCode])
+  @@index([customAlias])
   @@map("urls")
+}
+
+model ClickEvent {
+  id        String   @id @default(cuid())
+  timestamp DateTime @default(now())
+
+  browser        String?
+  browserVersion String? @map("browser_version")
+  os             String?
+  deviceType     String? @map("device_type")
+  country        String?
+  referrer       String?
+  ipHash         String? @map("ip_hash")
+
+  urlId String @map("url_id")
+  url   Url    @relation(fields: [urlId], references: [id], onDelete: Cascade)
+
+  @@index([urlId])
+  @@index([timestamp])
+  @@map("click_events")
 }
