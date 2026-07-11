@@ -2,6 +2,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import client from "../api/client.js";
 import { QRCodeSVG } from "qrcode.react";
+import { copyToClipboard } from "../utils/clipboard.js";
 
 export default function ShortenForm({ onUrlCreated }) {
   const [url, setUrl] = useState("");
@@ -46,9 +47,7 @@ export default function ShortenForm({ onUrlCreated }) {
 
   function handleCopy() {
     if (!result) return;
-    navigator.clipboard.writeText(result.shortUrl).then(() => {
-      toast.success("Copied to clipboard!");
-    });
+    copyToClipboard(result.shortUrl);
   }
 
   function handleReset() {

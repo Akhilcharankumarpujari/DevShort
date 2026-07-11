@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { QRCodeSVG } from "qrcode.react";
 import client from "../api/client.js";
+import { copyToClipboard } from "../utils/clipboard.js";
 import StatCard from "../components/StatCard.jsx";
 import ClickChart from "../components/ClickChart.jsx";
 import BrowserChart from "../components/BrowserChart.jsx";
@@ -83,10 +84,7 @@ export default function UrlAnalytics() {
             </div>
             <div className="flex gap-2 mt-4">
               <button
-                onClick={() => {
-                  navigator.clipboard.writeText(shortUrl);
-                  toast.success("Copied!");
-                }}
+                onClick={() => copyToClipboard(shortUrl)}
                 className="btn-primary text-sm px-4 py-2"
               >
                 Copy URL

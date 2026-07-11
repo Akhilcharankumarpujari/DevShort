@@ -5,6 +5,7 @@ import client from "../api/client.js";
 import ShortenForm from "../components/ShortenForm.jsx";
 import Pagination from "../components/Pagination.jsx";
 import EditUrlModal from "../components/EditUrlModal.jsx";
+import { copyToClipboard } from "../utils/clipboard.js";
 
 export default function Dashboard() {
   const [urls, setUrls] = useState([]);
@@ -59,9 +60,7 @@ export default function Dashboard() {
   }
 
   function handleCopy(shortUrl) {
-    navigator.clipboard.writeText(shortUrl).then(() => {
-      toast.success("Copied to clipboard!");
-    });
+    copyToClipboard(shortUrl);
   }
 
   function handleEditSaved() {
