@@ -51,6 +51,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://18.210.143.141:4000}
     container_name: devshort-frontend
     restart: unless-stopped
     ports:
