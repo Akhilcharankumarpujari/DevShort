@@ -15,7 +15,20 @@ const app = express();
 app.get("/metrics", metricsHandler);
 
 app.use(helmet());
-app.use(cors({ origin: config.corsOrigin }));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+      if (!origin) return callback(null, true);
+      
+      if (config.corsOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
 app.use(morgan(config.nodeEnv === "production" ? "combined" : "dev"));
 app.use(express.json({ limit: "1mb" }));
 
