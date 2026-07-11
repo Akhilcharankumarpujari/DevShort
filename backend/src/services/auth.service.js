@@ -71,3 +71,10 @@ export async function getUserProfile(userId) {
     totalUrls: user._count.urls,
   };
 }
+
+export default {
+  registerUser,
+  loginUser,
+  getUserProfile,
+};
+

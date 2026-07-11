@@ -62,3 +62,8 @@ export async function getUserDashboard(userId, options = {}) {
     totalClicks: totalClicks._sum.clickCount || 0,
   };
 }
+
+export default {
+  getUserDashboard,
+};
+

@@ -201,3 +201,9 @@ export async function getAggregateAnalytics(userId) {
     })),
   };
 }
+
+export default {
+  getUrlAnalytics,
+  getAggregateAnalytics,
+};
+
